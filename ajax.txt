@@ -1,0 +1,99 @@
+export class Ajax   {
+    constructor     (url,aHeader='application/x-www-form-urlencoded',aync=true) {
+        this._url       = url
+        this._aHeader   = aHeader
+        this._aync      = aync                       
+    }
+    set url         (url)           { this._url = url               }
+    get url         ()              { return this._url              }
+    set aHeader     (aHeader)       { this._aHeader = aHeader       }
+    get aHeader     ()              { return this._aHeader          }
+    set aync        (aync)          { this._aync = aync             }
+    get aync        ()              { return this._aync             }    
+    getAjax         (success)       {
+        let xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+        xhr.open('GET', this._url, this._aync);                  
+        xhr.onload = function() {
+            if(this.status == 200) {
+                success(this.responseText);
+            } else if(this.status == 404) {
+                console.log('Not Found');
+            }
+        }                              
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('Content-Type', this._aHeader);          
+        xhr.send();    
+        return xhr;        
+    }
+    postAjax        (postData)      {
+        let d = postData.data;
+        let xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+        let params = typeof d == 'string' ? d : Object.keys(d).map(
+                function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(d[k]) }
+            ).join('&');
+        xhr.open('POST', this._url, this._aync); 
+        xhr.onloadstart = function() {  
+            if(postData.bLoad) {
+                postData.bLoad();
+            }          
+        }        
+        xhr.onprogress = function(){                       
+            if(postData.bProgress) {
+                postData.bProgress();
+            }                        
+        }
+        xhr.onload = function() {
+            if(this.status == 200) {
+                postData.success(this.responseText);
+            } else if(this.status == 404) {
+                console.log('Not Found');
+            }
+        }
+        xhr.onloadend  = function(pe){                       
+            if(postData.complete) {
+                postData.complete();
+            }
+        }       
+        xhr.oInnernerror = function(){            
+            if(postData.error) {
+                postData.error();
+            }
+        }                                        
+        if(postData.header) {
+            this.aHeader = postData.header;
+        }                               
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('Content-Type', this.aHeader);             
+        xhr.send(params);       
+        return xhr;
+    }
+    ajaxCall        (postData)      {
+        if(postData.header) {
+            this.aHeader = postData.header;
+        }
+        if(postData.aync) {
+            this.aync = postData.aync;
+        }
+        if(postData.type == 'get') { 
+            this.url = postData.url;
+            if(postData.data) {
+                let d = postData.data;
+                let params = typeof d == 'string' ? d : Object.keys(d).map(
+                    function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(d[k]) }
+                ).join('&');
+                this.url = `${this.url}?${params}&`;
+            } else {
+                if(postData.url.indexOf('?') > 0)
+                    this.url = `${this.url}&`;
+                else
+                this.url = `${this.url}?`; 
+            } 
+            this.url = `${this.url}${new Date().getTime()}`;                                     
+            this. getAjax (postData.success);
+        }
+        if(postData.type == 'post') { 
+            this.url = postData.url;                                               
+            this. postAjax (postData);
+        }
+    }
+}
